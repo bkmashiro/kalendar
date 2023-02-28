@@ -5,25 +5,22 @@ type lessonInitObject = {
     beginDate?: Date;
     endDate?: Date;
     weekday: number;
-    repeat: "weekly" | "biweekly" | "once" | "biweekly2" | (() => boolean) | undefined;
+    repeat: "weekly" | "biweekly" | "once" | (() => boolean) | undefined;
     time: string | TimeSlot | TimeSlotID;
     name: string;
     teacher: string | undefined;
     building: string | undefined;
     room: string | undefined;
 };
-
 type CalendarDisplayObject = {
     beginTime: Date;
     endTime: Date;
     configs: any;
 };
-
 type daytime = {
     hour: number;
     minute: number;
 };
-
 class TimeSlot {
     begin: daytime;
     end: daytime;
@@ -52,24 +49,22 @@ class TimeSlot {
         return this;
     }
 }
-
 function dateDiffInDays(date1: Date, date2: Date): number {
     const msPerDay = 1000 * 60 * 60 * 24; // 每天的毫秒数
     const timeDiff = Math.abs(date2.getTime() - date1.getTime()); // 时间差的毫秒数
     const diffInDays = Math.round(timeDiff / msPerDay); // 转换为天数
     return diffInDays;
 }
-
 class Lesson {
-    _repeat: (() => boolean);
+    _repeat: (() => boolean) | string = "weekly";
     // check if the lesson should be repeated on this week
     doRepeat(date: Date): boolean {
         if (typeof this._repeat === "string") {
-            return {
-                "weekly": true,
-                "biweekly": ((() => { return dateDiffInDays(this.beginDate, new Date()) / 7 % 2 == 0 })()),
-                "once": false
-            }[this._repeat];
+            return ({
+                "weekly": ()=>true,
+                "biweekly": ()=>Math.floor(dateDiffInDays(this.beginDate, date) / 7)% 2 === 0,
+                "once": ()=>false,
+            } as any)[this._repeat]();
         } else {
             return this._repeat();
         }
@@ -104,7 +99,6 @@ class Lesson {
             return false;
         }
         if (this.doRepeat(date)) {
-            // console.log(this.weekday, (date as Date).getDay());
             if (this.weekday === (date as Date).getDay()) {
                 return true;
             }
@@ -136,7 +130,7 @@ class Lesson {
         }
     }
 
-    beginDate: Date = new Date("2023-2-1");
+    beginDate: Date = data.globalConfigs.beginDate;
     endDate?: Date;
     time: TimeSlot;
     name: string;
@@ -145,21 +139,17 @@ class Lesson {
     room: string;
     weekday: number;
     constructor(param: lessonInitObject) {
+        if(typeof param.beginDate === "string") param.beginDate = new Date(param.beginDate);
+        if(typeof param.endDate === "string") param.endDate = new Date(param.endDate);
         if(!param.beginDate) param.beginDate = data.globalConfigs.beginDate;
         if(!param.endDate) param.endDate = data.globalConfigs.endDate;
+        if(param.beginDate > param.endDate) throw new Error("beginDate should be earlier than endDate");
         if (!param.repeat) param.repeat = "weekly";
-        if (typeof param.repeat === "string") {
-            this._repeat = {
-                "weekly": (() => true),
-                "biweekly": (() => { return (dateDiffInDays(param.beginDate as Date, new Date()) / 7) % 2 == 0 }),
-                "biweekly2": (() => { return (dateDiffInDays(param.beginDate as Date, new Date()) / 7) % 2 == 1 }),
-                "once": (() => false),
-            }[param.repeat];
-        } else {
+        if (typeof param.repeat === "string" && param.repeat.startsWith("function")) {
+            this._repeat = getFunctionByString(param.repeat);
+        } else if (typeof param.repeat === "string" && ["weekly", "biweekly", "once"].includes(param.repeat)) {
             this._repeat = param.repeat;
         }
-        this.beginDate = param.beginDate;
-        this.endDate = param.endDate;
         if (typeof param.time === "number") {
             this.time = timeSlots[param.time];
         } else if (typeof param.time === "string") {
@@ -174,11 +164,9 @@ class Lesson {
         this.room = param.room ?? "";
     }
 }
-
 function getFunctionByString(func: string) {
     return Function('"use strict";return (' + func + ')')();
 }
-
 function initDefaultTimeSlots() {
     let timeSlots: TimeSlot[] = [
         new TimeSlot("8:00-9:40").setAlias("12"),
@@ -189,7 +177,6 @@ function initDefaultTimeSlots() {
 
     return timeSlots;
 }
-
 let timeSlots = initDefaultTimeSlots();
 let lessons: Lesson[] = [];
 function importAllLessons() {
@@ -197,7 +184,6 @@ function importAllLessons() {
         lessons.push(new Lesson(item as lessonInitObject));
     });
 }
-
 function getLessonsOfDate(date: Date | string) {
     if (typeof date === "string") {
         date = new Date(date);
@@ -205,10 +191,27 @@ function getLessonsOfDate(date: Date | string) {
     return lessons.filter((item) => item.hasLessonOnDate(date));
 }
 
+function UTCtoChinaTime(date: Date) {
+    return new Date(date.getTime() + 8 * 60 * 60 * 1000);
+}
+
+export function getLessonDOFromTo(beginDate: Date, endDate: Date) {
+    let lessonsDO: CalendarDisplayObject[] = [];
+    for (let i = beginDate; i <= endDate; i.setDate(i.getDate() + 1)) {
+        getLessonsOfDate(i).forEach(element => {
+            const lessonDO = element.getDisplayObjectOfDate(i);
+            if (lessonDO) {
+                lessonsDO.push(lessonDO);
+            }
+        });
+    }
+    return lessonsDO;
+}
 
 importAllLessons();
-let lessonsOfDate = getLessonsOfDate(new Date("2023-2-6"));
-console.log(lessonsOfDate);
-lessonsOfDate.forEach((item) => {
-    console.log(item.getDisplayObjectOfDate(new Date("2023-2-6")));
+
+let lessonsDO = getLessonDOFromTo(new Date("2023-3-16"), new Date("2023-3-16"));
+
+lessonsDO.forEach((item) => {
+    console.log(item);
 });

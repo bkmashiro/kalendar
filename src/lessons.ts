@@ -54,6 +54,7 @@ export default {
             time: "12",
             name: "离散数学",
             repeat: "biweekly",
+            beginDate: "2023-2-9",
         },
         {
             weekday: 4,
