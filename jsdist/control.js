@@ -1,5 +1,6 @@
 import { getLessonDOFromTo } from './kalendar';
 var displayWeekend = false;
+var displayTeacher = false;
 var weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 function init() {
   //add the weekdays to the table
@@ -20,6 +21,7 @@ function init() {
 function fetchLessons(beginDate, days) {
   return getLessonDOFromTo(beginDate, new Date(beginDate.getTime() + days * 24 * 60 * 60 * 1000));
 }
+var px_per_min = 1.2;
 function displayWeek(week) {
   //week must be monday
   if (week.getDay() != 1) {
@@ -40,28 +42,52 @@ function displayWeek(week) {
   var lessons = fetchLessons(new Date(week), 6);
   console.log(lessons);
   for (var _i = 0; _i < lessons.length; _i++) {
-    var lesson = lessons[_i];
-    var beginTime = lesson.beginTime;
-    var endTime = lesson.endTime;
-    var weekday = beginTime.getDay();
-    if (displayWeekend || weekday <= 5) {
-      var beginHour = beginTime.getHours();
-      var beginMinute = beginTime.getMinutes();
-      var endHour = endTime.getHours();
-      var endMinute = endTime.getMinutes();
-      var begin = beginHour * 60 + beginMinute;
-      var end = endHour * 60 + endMinute;
-      var lessonName = lesson.configs.name;
-      var lessonTeacher = lesson.configs.teacher;
-      var lessonBuilding = lesson.configs.building;
-      var lessonRoom = lesson.configs.room;
-      var lessonInfo = lessonName + ' ' + lessonTeacher + ' ' + lessonBuilding + ' ' + lessonRoom;
-      var row = $('#row' + weekday);
-      var lessonHeight = (end - begin) / 2;
-      var lessonTop = begin / 2;
-      // row.append('<td class="lesson" style="height:' + lessonHeight + 'px; top:' + lessonTop + 'px;">' + lessonInfo + '</td>');
-      // add line break
-      row.append('<p>' + lessonInfo.replace(/ /g, '<br>') + '</p>');
+    var lessonsOfDay = lessons[_i];
+    var lastLessonEnd = 0;
+    for (var j = 0; j < lessonsOfDay.length; j++) {
+      var lesson = lessonsOfDay[j];
+      var beginTime = lesson.beginTime;
+      var endTime = lesson.endTime;
+      var weekday = beginTime.getDay();
+      if (displayWeekend || weekday <= 5) {
+        var beginHour = beginTime.getHours();
+        var beginMinute = beginTime.getMinutes();
+        var endHour = endTime.getHours();
+        var endMinute = endTime.getMinutes();
+        var begin = beginHour * 60 + beginMinute;
+        var end = endHour * 60 + endMinute;
+        var lessonName = lesson.configs.name;
+        var lessonTeacher = lesson.configs.teacher;
+        var lessonBuilding = lesson.configs.building;
+        var lessonRoom = lesson.configs.room;
+        var row = $('#row' + weekday);
+        var lessonHeight = (end - begin) * px_per_min;
+        var zero_line = 8 * 60 * px_per_min;
+        var lessonTop = begin * px_per_min - zero_line;
+        if (lessonTop < 0) {
+          lessonTop = 0;
+        }
+        lessonTop -= lastLessonEnd;
+        lastLessonEnd += lessonTop + lessonHeight;
+        var mydiv = document.createElement('div');
+        mydiv.className = 'lesson';
+        mydiv.style.position = 'relative';
+        mydiv.style.marginTop = lessonTop + 'px';
+        mydiv.style.height = lessonHeight + 'px';
+        mydiv.style.textAlign = 'center';
+        var pLessonName = document.createElement('p');
+        pLessonName.innerText = lessonName;
+        mydiv.appendChild(pLessonName);
+        if (displayTeacher) {
+          var pLessonTeacher = document.createElement('p');
+          pLessonTeacher.innerText = lessonTeacher;
+          mydiv.appendChild(pLessonTeacher);
+        }
+        var pLocation = document.createElement('p');
+        pLocation.innerText = lessonBuilding + ' ' + lessonRoom;
+        mydiv.appendChild(pLocation);
+        row.append(mydiv);
+      }
     }
   }
 }

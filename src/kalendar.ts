@@ -196,12 +196,13 @@ function UTCtoChinaTime(date: Date) {
 }
 
 export function getLessonDOFromTo(beginDate: Date, endDate: Date) {
-    let lessonsDO: CalendarDisplayObject[] = [];
+    let lessonsDO: CalendarDisplayObject[][] = [];
     for (let i = beginDate; i <= endDate; i.setDate(i.getDate() + 1)) {
+        lessonsDO.push([]);
         getLessonsOfDate(i).forEach(element => {
             const lessonDO = element.getDisplayObjectOfDate(i);
             if (lessonDO) {
-                lessonsDO.push(lessonDO);
+                lessonsDO[lessonsDO.length - 1].push(lessonDO);
             }
         });
     }

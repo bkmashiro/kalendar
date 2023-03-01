@@ -5,6 +5,7 @@
   "main": "kalendar.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx babel --extensions .ts src --out-dir jsdist --watch & webpack --watch",
     "build": "npx babel --extensions .ts src --out-dir jsdist && webpack"
   },
   "repository": {

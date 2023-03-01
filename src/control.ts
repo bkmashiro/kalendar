@@ -1,6 +1,7 @@
 import { getLessonDOFromTo } from './kalendar';
 
 const displayWeekend = false;
+const displayTeacher = false;
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 
@@ -25,6 +26,8 @@ function fetchLessons(beginDate : Date, days : number) {
     return getLessonDOFromTo(beginDate, new Date(beginDate.getTime() + days * 24 * 60 * 60 * 1000));
 }
 
+const px_per_min = 1.2;
+
 function displayWeek(week : Date) {
     //week must be monday
     if(week.getDay() != 1) {
@@ -45,31 +48,54 @@ function displayWeek(week : Date) {
     const lessons = fetchLessons(new Date(week), 6);
     console.log(lessons);
     for (let i = 0; i < lessons.length; i++) {
-        const lesson = lessons[i];
-        const beginTime = lesson.beginTime;
-        const endTime = lesson.endTime;
-        const weekday = beginTime.getDay();
-        if (displayWeekend || weekday <= 5) {
-            const beginHour = beginTime.getHours();
-            const beginMinute = beginTime.getMinutes();
-            const endHour = endTime.getHours();
-            const endMinute = endTime.getMinutes();
-            const begin = beginHour * 60 + beginMinute;
-            const end = endHour * 60 + endMinute;
-            const lessonName = lesson.configs.name;
-            const lessonTeacher = lesson.configs.teacher;
-            const lessonBuilding = lesson.configs.building;
-            const lessonRoom = lesson.configs.room;
-            const lessonInfo = lessonName + ' ' + lessonTeacher + ' ' + lessonBuilding + ' ' + lessonRoom;
-            const row = $('#row' + weekday);
-            const lessonHeight = (end - begin) / 2;
-            const lessonTop = begin / 2;
-            // row.append('<td class="lesson" style="height:' + lessonHeight + 'px; top:' + lessonTop + 'px;">' + lessonInfo + '</td>');
-            // add line break
-            row.append('<p>' + lessonInfo.replace(/ /g, '<br>') + '</p>');
-
+        const lessonsOfDay = lessons[i];
+        let lastLessonEnd = 0;
+        for(let j = 0; j < lessonsOfDay.length; j++) {
+            const lesson = lessonsOfDay[j];
+            const beginTime = lesson.beginTime;
+            const endTime = lesson.endTime;
+            const weekday = beginTime.getDay();
+            if (displayWeekend || weekday <= 5) {
+                const beginHour = beginTime.getHours();
+                const beginMinute = beginTime.getMinutes();
+                const endHour = endTime.getHours();
+                const endMinute = endTime.getMinutes();
+                const begin = beginHour * 60 + beginMinute;
+                const end = endHour * 60 + endMinute;
+                const lessonName = lesson.configs.name;
+                const lessonTeacher = lesson.configs.teacher;
+                const lessonBuilding = lesson.configs.building;
+                const lessonRoom = lesson.configs.room;
+                const row = $('#row' + weekday);
+                const lessonHeight = (end - begin)*px_per_min;
+                const zero_line = 8 * 60 * px_per_min;
+                let lessonTop = begin * px_per_min - zero_line;
+                if (lessonTop < 0) {
+                    lessonTop = 0;
+                }
+                lessonTop -= lastLessonEnd;
+                lastLessonEnd += lessonTop + lessonHeight;
+                let mydiv = document.createElement('div');
+                mydiv.className = 'lesson';
+                mydiv.style.position = 'relative';
+                mydiv.style.marginTop = lessonTop + 'px';
+                mydiv.style.height = lessonHeight + 'px';
+                mydiv.style.textAlign = 'center';
+                let pLessonName = document.createElement('p');
+                pLessonName.innerText = lessonName;
+                mydiv.appendChild(pLessonName);
+                if (displayTeacher) {
+                    let pLessonTeacher = document.createElement('p');
+                    pLessonTeacher.innerText = lessonTeacher;
+                    mydiv.appendChild(pLessonTeacher);
+                }
+                let pLocation = document.createElement('p');
+                pLocation.innerText = lessonBuilding + ' ' + lessonRoom;
+                mydiv.appendChild(pLocation);
+                
+                row.append(mydiv);
+            }
         }
-
     }
 }
 
